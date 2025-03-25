@@ -1,0 +1,4 @@
+pandas
+deep-translator
+nltk
+openai==0.28
