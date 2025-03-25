@@ -18,3 +18,5 @@ docker run --rm -v "$(pwd):/app" translator --dataset translated_output.csv --la
 3. Translate a CSV to a new CSV:
 
 docker run --rm -v "$(pwd):/app" translator --input_csv translated_output.csv --output_csv translated.csv --language fr
+
+docker run --rm -v "$(pwd):/app" translator --input_csv translated_output.csv --output_csv translated.csv --language fr --translator gpt --apikey OPENAI_API_KEY
