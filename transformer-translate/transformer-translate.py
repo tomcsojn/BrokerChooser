@@ -1,29 +1,28 @@
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer,pipeline
 import argparse
 import pandas as pd
+import torch
 
 def load_model(model_name):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
     return tokenizer, model
 
-def translate_text(text, target_language, model_name):
-    tokenizer, model = load_model(model_name)
-    text = f"translate English to {target_language}: {text}"
-
-    # inputs = tokenizer(text, return_tensors="pt", max_length=128, truncation=True)
-    # translated = model.generate(**inputs)
-    # translated_text = tokenizer.decode(translated[0], skip_special_tokens=True)
-
-    translator = pipeline(f"translation_en_to_{target_language}", model=model,PreTrainedTokenizer=tokenizer)
-    translated_text=translator(text)[0]['translation_text']
+def translate_text(text, target_language, tokenizer, model):
+    translator = pipeline(
+        f"translation_en_to_{target_language}",
+        model=model,
+        tokenizer=tokenizer,
+        max_length=400,
+        device=0 if torch.cuda.is_available() else -1
+    )
+    translated_text = translator(text)[0]['translation_text']
     return translated_text
-
-def translate_csv(input_csv, target_language, output_csv, model_name):
+def translate_csv(input_csv, target_language, output_csv, tokenizer, model):
     df = pd.read_csv(input_csv)
     if 'english' not in df.columns:
         raise ValueError("Input CSV must contain an 'english' column for English text.")
-    df[f'{target_language}'] = df['english'].apply(lambda x: translate_text(x, target_language, model_name))
+    df['translated_value'] = df['english'].apply(lambda x: translate_text(x, target_language, tokenizer, model))
     df.to_csv(output_csv, index=False)
     print(f"Translated CSV saved to {output_csv}")
 
@@ -36,11 +35,13 @@ def main():
     parser.add_argument('--output_csv', type=str, help='Path to save the translated CSV file', default='translated_output.csv')
     args = parser.parse_args()
     
+    tokenizer, model = load_model(args.model)
+
     if args.text:
-        print(f"Translated Text: {translate_text(args.text, args.language, args.model)}")
-    
+        print("Translated Text:", translate_text(args.text, args.language, tokenizer, model))
+
     if args.input_csv:
-        translate_csv(args.input_csv, args.language, args.output_csv, args.model)
+        translate_csv(args.input_csv, args.language, args.output_csv, tokenizer, model)
 
 if __name__ == "__main__":
     main()
